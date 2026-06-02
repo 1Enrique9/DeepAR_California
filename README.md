@@ -1,159 +1,238 @@
-# DeepAR para Forecasting de Demanda en M5 (California)
+# Réplica de DeepAR sobre el Dataset M5 (California)
 
 ## Descripción
 
-Este proyecto implementa una réplica del modelo DeepAR propuesto por Amazon para forecasting probabilístico de series de tiempo.
+Este proyecto presenta una reproducción académica de la metodología **DeepAR**, propuesta originalmente por Amazon Research para el pronóstico probabilístico de series temporales.
 
-La implementación utiliza el dataset M5 Forecasting y se enfoca exclusivamente en el subconjunto correspondiente al estado de California.
+La implementación se desarrolló utilizando el **M5 Forecasting Dataset**, trabajando específicamente con las series correspondientes al estado de California. El objetivo principal fue comprender y replicar los conceptos fundamentales del artículo original, incluyendo el entrenamiento de un modelo global sobre miles de series temporales, la incorporación de variables categóricas y temporales, y la generación de pronósticos probabilísticos mediante una distribución Binomial Negativa.
 
-El objetivo es comparar DeepAR contra modelos base tradicionales y evaluar tanto el desempeño puntual como probabilístico de las predicciones.
+Este trabajo tiene fines educativos y de investigación, por lo que no pretende reproducir exactamente la implementación interna utilizada por Amazon, sino estudiar y aplicar los principios descritos en la publicación original.
+
+---
+
+## Objetivos
+
+* Comprender la arquitectura DeepAR.
+* Replicar el flujo de preparación de datos para series temporales múltiples.
+* Construir un modelo global para miles de productos simultáneamente.
+* Incorporar covariables temporales y variables categóricas estáticas.
+* Generar pronósticos probabilísticos.
+* Comparar el desempeño de DeepAR contra modelos benchmark tradicionales.
 
 ---
 
 ## Dataset
 
-Se utilizó el dataset:
+Se utilizó el conjunto de datos oficial de la competencia M5 Forecasting.
 
-- M5 Forecasting Accuracy
+Archivos originales:
 
-Subconjunto utilizado:
+* `sales_train_validation.csv`
+* `calendar.csv`
+* `sell_prices.csv`
+* `sample_submission.csv`
 
-- Estado: California
-- Series producto-tienda: 12,196
-- Días históricos: 1,913
-- Horizonte de predicción: 28 días
+Para reducir los requerimientos computacionales, se trabajó únicamente con las series pertenecientes al estado de California.
+
+Características del subconjunto utilizado:
+
+* 12,196 series temporales.
+* 1,913 días históricos por serie.
+* Más de 3,000 productos únicos.
+* 4 tiendas del estado de California.
+* Variables temporales derivadas del calendario oficial del M5.
+
+---
+
+## Arquitectura Implementada
+
+La réplica utiliza una arquitectura DeepAR basada en:
+
+### Red Recurrente
+
+* Tipo: LSTM
+* Número de capas: 3
+* Hidden Size: 80
+* Dropout: 0.1
+
+### Distribución Probabilística
+
+* Binomial Negativa
+
+Esta distribución resulta adecuada para modelar ventas debido a que:
+
+* Las observaciones son conteos enteros no negativos.
+* Existe sobredispersión.
+* Muchas series presentan demanda intermitente.
+
+### Parámetros de Entrenamiento
+
+* Batch Size: 128
+* Learning Rate: 5e-4
+* Epochs: 40
+* Context Length: 84 días
+* Prediction Length: 28 días
+
+Entrenamiento realizado en Google Colab utilizando GPU NVIDIA T4.
 
 ---
 
 ## Estructura del Proyecto
 
 ```text
-notebooks/
+DeepAR_California/
 │
-├── 01_Exploracion.ipynb
-├── 02_Preprocesamiento.ipynb
-├── 03_Dataset_DeepAR.ipynb
-└── 04_DeepAR.ipynb
+├── notebooks/
+│   ├── 01_exploracion_m5.ipynb
+│   ├── 02_preparacion_datos_CA.ipynb
+│   ├── 03_generacion_matrices.ipynb
+│   └── 04_entrenamiento_evaluacion_deepar.ipynb
+│
+├── data/
+│   ├── raw/
+│   │   ├── sales_train_validation.csv
+│   │   ├── calendar.csv
+│   │   ├── sell_prices.csv
+│   │   └── sample_submission.csv
+│   │
+│   └── processed/
+│       ├── train_target_matrix_CA.npy
+│       ├── valid_target_matrix_CA.npy
+│       ├── valid_time_features_array_CA.npy
+│       ├── static_cat_encoded_CA.parquet
+│       ├── series_metadata_CA.parquet
+│       ├── calendar_hist_CA.parquet
+│       └── deepar_dataset_config_CA.pkl
+│
+├── reports/
+│   ├── DeepAR_Report.pdf
+│   └── figures/
+│
+├── README.md
+└── requirements.txt
 ```
-
-### Notebook 01 – Exploración
-
-- Carga de datos
-- Estadísticos descriptivos
-- Distribución de ventas
-- Análisis de demanda intermitente
-
-### Notebook 02 – Preprocesamiento
-
-- Filtrado de California
-- Construcción de matrices compactas
-- Creación de covariables temporales
-- Codificación de variables categóricas
-
-### Notebook 03 – Dataset DeepAR
-
-- Construcción de objetos ListDataset
-- Validación de dimensiones
-- Configuración del modelo
-
-### Notebook 04 – Entrenamiento y Evaluación
-
-- Entrenamiento DeepAR
-- Forecast probabilístico
-- Evaluación contra benchmarks
-- Análisis de incertidumbre
 
 ---
 
-## Modelo
+## Flujo Metodológico
 
-La configuración final utilizada fue:
+### Notebook 1 – Exploración del Dataset
 
-```python
-DeepAREstimator(
-    freq="D",
-    prediction_length=28,
-    context_length=84,
-    num_layers=3,
-    hidden_size=80,
-    dropout_rate=0.1,
-    distr_output=NegativeBinomialOutput(),
-    batch_size=128,
-    num_batches_per_epoch=300,
-    lr=5e-4
-)
-```
+* Carga de archivos M5.
+* Análisis de dimensiones.
+* Revisión de estructura de ventas.
+* Exploración de categorías y tiendas.
+* Análisis preliminar de demanda.
 
-Entrenamiento:
+### Notebook 2 – Preparación de Datos
 
-- GPU: NVIDIA T4
-- Épocas: 40
-- Tiempo aproximado: 31 minutos
+* Filtrado de California.
+* Construcción de series temporales.
+* Creación de variables temporales.
+* Generación de variables categóricas.
+* Validación de integridad de datos.
+
+### Notebook 3 – Construcción de Matrices
+
+* Creación de matrices objetivo.
+* Construcción de covariables temporales.
+* Codificación de variables categóricas.
+* Exportación de archivos para entrenamiento.
+
+### Notebook 4 – Entrenamiento y Evaluación
+
+* Construcción de datasets GluonTS.
+* Entrenamiento DeepAR.
+* Monitoreo de gradientes.
+* Forecast probabilístico.
+* Evaluación sobre conjunto de prueba.
+* Comparación contra benchmarks.
 
 ---
 
-## Covariables Utilizadas
+## Variables Utilizadas
 
 ### Variables Estáticas
 
-- item_id
-- dept_id
-- cat_id
-- store_id
-- state_id
+* Item ID
+* Department ID
+* Category ID
+* Store ID
+* State ID
 
-### Variables Dinámicas
+### Variables Temporales
 
-- dayofweek
-- dayofmonth
-- weekofyear
-- month
-- snap_CA
+* Día de la semana
+* Mes
+* Año
+* SNAP California
+* Eventos especiales
+* Indicadores derivados del calendario
 
 ---
 
-## Resultados
+## Evaluación
 
-| Modelo | MAE | RMSE | sMAPE |
-|----------|----------:|----------:|----------:|
-| Naive | 1.479 | 3.452 | 0.854 |
-| Seasonal Naive | 1.342 | 2.903 | 0.843 |
-| Moving Average | 1.107 | 2.260 | 1.262 |
-| DeepAR | **0.995** | **2.228** | **0.703** |
+El modelo fue evaluado mediante una partición temporal:
 
-### Cobertura Probabilística
+```text
+Train      : primeros 1857 días
+Validation : siguientes 28 días
+Test       : últimos 28 días
+```
 
-| Métrica | Valor |
-|----------|----------:|
-| Coverage 80% | 0.909 |
-| Quantile Loss 0.5 | 0.497 |
-| Quantile Loss 0.9 | 0.333 |
+Esta estrategia evita fuga de información y permite evaluar el desempeño en un periodo completamente futuro respecto al entrenamiento.
+
+Las métricas utilizadas incluyen:
+
+* MAE
+* RMSE
+* sMAPE
+* Bias
+* Quantile Loss
+* Coverage
+
+Además, DeepAR fue comparado contra:
+
+* Naive Forecast
+* Seasonal Naive (28 días)
+* Moving Average (28 días)
 
 ---
 
 ## Principales Hallazgos
 
-- DeepAR obtuvo el mejor RMSE y MAE.
-- La demanda presenta una alta proporción de ceros (~66%).
-- Las ventas muestran una distribución altamente sesgada.
-- DeepAR logra capturar patrones compartidos entre miles de series.
-- Los intervalos probabilísticos son conservadores.
-- El modelo presenta una ligera tendencia a subestimar productos de alta demanda.
+* DeepAR logró resultados competitivos frente a los modelos benchmark.
+* El modelo obtuvo el menor error absoluto promedio (MAE).
+* La arquitectura probabilística permitió generar intervalos de confianza además de predicciones puntuales.
+* La distribución Binomial Negativa se adaptó adecuadamente al comportamiento discreto e intermitente de muchas series.
+* Los mayores errores se concentraron en productos con picos de demanda poco frecuentes y difíciles de anticipar.
 
 ---
 
-## Trabajo Futuro
+## Tecnologías Utilizadas
 
-- Incorporar precios (`sell_price`)
-- Incorporar eventos/promociones
-- Evaluar sobre todo M5
-- Comparar contra TFT y N-BEATS
-- Evaluar usando WRMSSE
+* Python
+* NumPy
+* Pandas
+* Matplotlib
+* PyTorch
+* GluonTS
+* Lightning
+* Google Colab
 
 ---
 
-## Referencias
+## Referencia Principal
 
-DeepAR: Probabilistic Forecasting with Autoregressive Recurrent Networks
+Salinas, D., Flunkert, V., Gasthaus, J., & Januschowski, T.
 
-Amazon Research
+**DeepAR: Probabilistic Forecasting with Autoregressive Recurrent Networks**
+
+International Journal of Forecasting, 2020.
+
+---
+
+## Nota
+
+Este repositorio corresponde a una reproducción académica de la metodología DeepAR con fines educativos y de aprendizaje. Todos los créditos de la arquitectura original pertenecen a los autores del artículo y a Amazon Research.
